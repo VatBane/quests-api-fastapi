@@ -1,8 +1,8 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from v1.database.schemas import QuestOrm, TaskOrm
+from v1.database.schemas import QuestOrm, TaskOrm, CompletionOrm
 from v1.exceptions.exceptions import DuplicateError
 from v1.routers.quests.models.quest import QuestOutput, QuestInput
 from v1.routers.quests.models.tasks import TaskOutput
@@ -18,9 +18,28 @@ class QuestController:
                              limit: int = 20,
                              offset: int = 0
                              ) -> list[QuestOutput]:
-        query = select(QuestOrm).limit(limit).offset(offset).order_by(QuestOrm.id)
+        query = (select(QuestOrm,
+                        func.count(TaskOrm.id).label('questions_number'),
+                        func.count(CompletionOrm.id).label('completions_number'))
+                 .outerjoin(TaskOrm, TaskOrm.quest_id == QuestOrm.id)
+                 .outerjoin(CompletionOrm, CompletionOrm.quest_id == QuestOrm.id)
+                 .group_by(QuestOrm.id)
+                 .limit(limit)
+                 .offset(offset)
+                 .order_by(QuestOrm.id)
+                 )
         result = await self.session.execute(query)
-        result = [QuestOutput.model_validate(r) for r in result]
+        result = result.all()
+
+        result = [
+            QuestOutput.model_validate({
+                "id": quest.id,
+                "name": quest.name,
+                "description": quest.description,
+                "questions_number": questions_number,
+                "completion_number": completions_number,
+            })
+            for quest, questions_number, completions_number in result]
 
         return result
 

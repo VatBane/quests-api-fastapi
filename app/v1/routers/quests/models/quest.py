@@ -16,6 +16,7 @@ class QuestInput(QuestBase):
 
 class QuestOutput(QuestBase):
     id: int = Field(gt=0)
-    tasks: list[TaskOutput] = Field(default_factory=list)
+    questions_number: int = Field(alias="questionsNumber", gt=0, default=1)
+    completions_number: int = Field(alias="completionsNumber", ge=0, default=0)
 
     model_config = ConfigDict(from_attributes=True)
