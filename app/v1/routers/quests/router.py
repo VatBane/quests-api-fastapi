@@ -40,13 +40,13 @@ async def create_quest(session: Annotated[AsyncSession, Depends(get_session)],
 
 @quest_router.post('/by_filters')
 async def get_quests_by_filters(session: Annotated[AsyncSession, Depends(get_session)],
-                                sort: Annotated[list[Sort], Body()],
+                                sorts: Annotated[list[Sort], Body()],
                                 pagination: Annotated[Pagination, Body()],
                                 ) -> list[QuestOutput]:
     controller = QuestController(session=session)
 
     try:
-        result = await controller.get_quests_by_filters(sorts=sort, pagination=pagination)
+        result = await controller.get_quests_by_filters(sorts=sorts, pagination=pagination)
     except CustomError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc))
 
