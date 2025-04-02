@@ -12,7 +12,7 @@ from v1.routers.quests.models.quest import QuestInput, QuestOutput
 quest_router = APIRouter(tags=["Quest Management"])
 
 
-@quest_router.get('/')
+@quest_router.get('/', deprecated=True)
 async def get_all_quests(session: Annotated[AsyncSession, Depends(get_session)],
                          limit: Annotated[int, Query(gt=0)] = 20,
                          offset: Annotated[int, Query(ge=0)] = 0,
