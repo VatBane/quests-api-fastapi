@@ -7,5 +7,5 @@ engine = create_async_engine(DBSettings().url)
 
 
 async def get_session():
-    with AsyncSession(engine) as session:
+    async with AsyncSession(engine) as session:
         yield session
