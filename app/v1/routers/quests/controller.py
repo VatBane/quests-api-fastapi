@@ -1,10 +1,12 @@
-from sqlalchemy import select, func
+from sqlalchemy import select, func, asc, desc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+
 from v1.database.schemas import QuestOrm, TaskOrm, CompletionOrm
 from v1.exceptions.exceptions import DuplicateError
-from v1.routers.quests.models.quest import QuestOutput, QuestInput
+from v1.models.common import Sort, Pagination
+from v1.routers.quests.models.quest import QuestOutput, QuestInput, QuestOutputExtended
 from v1.routers.quests.models.tasks import TaskOutput
 
 
@@ -43,9 +45,44 @@ class QuestController:
 
         return result
 
+    async def get_quests_by_filters(self,
+                                    sort: Sort,
+                                    pagination: Pagination):
+        order_by = asc(*sort.columns) if sort.order == 'asc' else desc(*sort.columns)
+
+        query = (select(QuestOrm,
+                        func.count(TaskOrm.id).label('questions_number'),
+                        func.count(CompletionOrm.id).label('completions_number'))
+                 .outerjoin(TaskOrm, TaskOrm.quest_id == QuestOrm.id)
+                 .outerjoin(CompletionOrm, CompletionOrm.quest_id == QuestOrm.id)
+                 .group_by(QuestOrm)
+                 .limit(pagination.limit)
+                 .offset(pagination.offset)
+                 .order_by(order_by)
+                 )
+
+        query_builder = QueryBuilder()
+        query_builder.select([QuestOrm, func.count(TaskOrm.id).label('questions_number'),
+                              func.count(CompletionOrm.id).label('completions_number')])
+
+        result = await self.session.execute(query)
+        result = result.all()
+
+        result = [
+            QuestOutput.model_validate({
+                "id": quest.id,
+                "name": quest.name,
+                "description": quest.description,
+                "questions_number": questions_number,
+                "completion_number": completions_number,
+            })
+            for quest, questions_number, completions_number in result]
+
+        return result
+
     async def create_quest(self,
                            quest: QuestInput
-                           ) -> QuestOutput:
+                           ) -> QuestOutputExtended:
         quest_db = QuestOrm(**quest.model_dump(exclude={"tasks"}))
 
         try:
@@ -63,7 +100,11 @@ class QuestController:
         except IntegrityError:
             raise DuplicateError("Each question should be unique!")
 
-        result = QuestOutput.model_validate(quest_db)
-        result.tasks = [TaskOutput.model_validate(t) for t in tasks]
+        result = QuestOutputExtended.model_validate({
+            "id": quest_db.id,
+            "name": quest_db.name,
+            "description": quest_db.description,
+            "tasks": [TaskOutput.model_validate(t) for t in tasks],
+        })
 
         return result

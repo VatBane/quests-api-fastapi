@@ -19,4 +19,7 @@ class QuestOutput(QuestBase):
     questions_number: int = Field(alias="questionsNumber", gt=0, default=1)
     completions_number: int = Field(alias="completionsNumber", ge=0, default=0)
 
-    model_config = ConfigDict(from_attributes=True)
+
+class QuestOutputExtended(QuestBase):
+    id: Annotated[int, Field(gt=0)]
+    tasks: Annotated[list[TaskOutput], Field(min_length=1)]

@@ -5,8 +5,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from v1.database.database import get_session
 from v1.exceptions.exceptions import CustomError
+from v1.models.common import Pagination, Sort
 from v1.routers.quests.controller import QuestController
-from v1.routers.quests.models.quest import QuestInput
+from v1.routers.quests.models.quest import QuestInput, QuestOutput
 
 quest_router = APIRouter(tags=["Quest Management"])
 
@@ -31,6 +32,21 @@ async def create_quest(session: Annotated[AsyncSession, Depends(get_session)],
     try:
         result = await controller.create_quest(quest=quest)
         await session.commit()
+    except CustomError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+    return result
+
+
+@quest_router.post('/by_filters')
+async def get_quests_by_filters(session: Annotated[AsyncSession, Depends(get_session)],
+                                sort: Annotated[Sort, Body()],
+                                pagination: Annotated[Pagination, Body()],
+                                ) -> list[QuestOutput]:
+    controller = QuestController(session=session)
+
+    try:
+        result = await controller.get_quests_by_filters(sort=sort, pagination=pagination)
     except CustomError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc))
 
