@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Body, HTTPException
+from fastapi import APIRouter, Depends, Query, Body, HTTPException, Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from v1.database.database import get_session
@@ -47,6 +47,20 @@ async def get_quests_by_filters(session: Annotated[AsyncSession, Depends(get_ses
 
     try:
         result = await controller.get_quests_by_filters(sorts=sorts, pagination=pagination)
+    except CustomError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc))
+
+    return result
+
+
+@quest_router.get('/{quest_id}')
+async def get_quest_expanded(session: Annotated[AsyncSession, Depends(get_session)],
+                             quest_id: Annotated[int, Path(gt=0)],
+                             ):
+    controller = QuestController(session=session)
+
+    try:
+        result = await controller.get_quest_info(quest_id=quest_id)
     except CustomError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc))
 
