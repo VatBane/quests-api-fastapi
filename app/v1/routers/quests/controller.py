@@ -2,9 +2,8 @@ from sqlalchemy import select, func, asc, desc, and_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 from v1.database.schemas import QuestOrm, TaskOrm, CompletionOrm
-from v1.exceptions.exceptions import DuplicateError, ValidationError
+from v1.exceptions.exceptions import DuplicateError, ValidationError, ResourceNotFoundError
 from v1.models.common import Sort, Pagination
 from v1.routers.quests.models.quest import QuestOutput, QuestInput, QuestOutputExtended
 from v1.routers.quests.models.tasks import TaskOutput
@@ -112,7 +111,8 @@ class QuestController:
 
         # save Task instances
         try:
-            tasks = [TaskOrm(quest_id=quest_db.id, **task.model_dump()) for task in quest.tasks]
+            tasks = [TaskOrm(quest_id=quest_db.id, order=order, **task.model_dump())
+                     for order, task in enumerate(quest.tasks)]
             self.session.add_all(tasks)
             await self.session.flush()
             [await self.session.refresh(task) for task in tasks]
@@ -128,3 +128,25 @@ class QuestController:
         })
 
         return result
+
+    async def get_quest_info(self, quest_id: int):
+        query = select(QuestOrm).where(QuestOrm.id == quest_id)
+        quest = await self.session.execute(query)
+        quest = quest.scalar()
+
+        if not quest:
+            raise ResourceNotFoundError("Quest with given id not exist!")
+
+        query = select(TaskOrm).where(TaskOrm.quest_id == quest_id).order_by(asc(TaskOrm.order),
+                                                                             asc(TaskOrm.id))
+        tasks = await self.session.execute(query)
+        tasks = tasks.scalars().all()
+        tasks = [TaskOutput.model_validate(task) for task in tasks]
+
+        quest = QuestOutputExtended.model_validate({
+            "id": quest.id,
+            "name": quest.name,
+            "description": quest.description,
+            "tasks": tasks})
+
+        return quest

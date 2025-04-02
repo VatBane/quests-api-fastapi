@@ -47,6 +47,9 @@ class SingleTaskInput(TaskBase):
         if len(self.answers) != 1:
             raise ValueError("Single questions accept only 1 correct answer!")
 
+        if self.answers[0] not in self.responses:
+            raise ValueError("Correct answer must appear in responses!")
+
         return self
 
 
@@ -60,6 +63,9 @@ class ImageTaskInput(TaskBase):
         if len(self.answers) != 1:
             raise ValueError("Image questions accept only 1 correct answer!")
 
+        if self.answers[0] not in self.responses:
+            raise ValueError("Correct answer must appear in responses!")
+
         return self
 
 class MultipleTaskInput(TaskBase):
@@ -72,8 +78,13 @@ class MultipleTaskInput(TaskBase):
         if len(self.answers) == 0:
             raise ValueError("Multiple questions accept at least 1 correct answer!")
 
+        if any([answer not in self.responses for answer in self.answers]):
+            raise ValueError("Correct answer must appear in responses!")
+
+        return self
+
 
 class TaskOutput(TaskBase):
     id: int = Field(gt=0)
-
+    order: int = Field(ge=0)
     model_config = ConfigDict(from_attributes=True)

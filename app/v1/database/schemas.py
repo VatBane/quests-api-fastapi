@@ -20,8 +20,6 @@ class QuestOrm(Base):
     id: Mapped[int] = mapped_column(Integer)
     name: Mapped[str] = mapped_column(String(128), nullable=False)
     description: Mapped[str] = mapped_column(String(256), nullable=True)
-    # questions_number: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    # completions_number: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     __table_args__ = (
         PrimaryKeyConstraint('id', name='quest_pkey'),
@@ -34,6 +32,7 @@ class TaskOrm(Base):
 
     id: Mapped[int] = mapped_column(Integer)
     quest_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    order: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     type: Mapped[str] = mapped_column(String(16), nullable=False, default=TaskType.TEXT,
                                       server_default=TaskType.TEXT)
     question: Mapped[str] = mapped_column(Text, nullable=False)
