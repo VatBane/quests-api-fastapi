@@ -9,5 +9,5 @@ class Pagination(BaseModel):
 
 
 class Sort(BaseModel):
-    columns: Annotated[list[str], Field(min_length=1, default=["id"])]
+    column: Annotated[str, Field(default="id")]
     order: Literal["asc", "desc"]

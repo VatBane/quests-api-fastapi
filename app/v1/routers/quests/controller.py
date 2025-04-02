@@ -46,24 +46,23 @@ class QuestController:
         return result
 
     async def get_quests_by_filters(self,
-                                    sort: Sort,
+                                    sorts: list[Sort],
                                     pagination: Pagination) -> list[QuestOutput]:
         """
         Returns list of quests
-        :param sort: info how to sort response
+        :param sorts: info how to sort response
         :param pagination: pagination details
         :return: list of quest
         """
         # validate if user provided wrong columns
-        if any(col not in QuestOutput.get_fields() for col in sort.columns):
+        if any(sort.column not in QuestOutput.get_fields() for sort in sorts):
             raise ValidationError("Sort by non-existing field!")
 
         # define sort order
-        sort.columns = [getattr(QuestOrm, col, col) for col in sort.columns]
-        if sort.order == 'asc':
-            order_by = [asc(col) for col in sort.columns]
-        else:
-            order_by = [desc(col) for col in sort.columns]
+        order_by = []
+        for sort in sorts:
+            sort.column = getattr(QuestOrm, sort.column, sort.column)
+            order_by.append(asc(sort.column) if sort.order == 'asc' else desc(sort.column))
 
         # query objects
         query = (select(QuestOrm,
